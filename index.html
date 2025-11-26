@@ -3,6 +3,9 @@
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+		<meta name="theme-color" content="#fbfdff" />
 		<title>Workout Calendar — Simple App</title>
 		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 		<style>
@@ -14,14 +17,27 @@
 				--glass: rgba(11,37,64,0.06);
 				--muted: rgba(11,37,64,0.6);
 				--text: #0b2540;
+				--safe-top: env(safe-area-inset-top, 0px);
+				--safe-bottom: env(safe-area-inset-bottom, 0px);
 			}
 			*{box-sizing:border-box}
 			html,body{height:100%}
 			body{
-				margin:0; padding:28px; font-family:'Inter',system-ui,Segoe UI,Roboto,Arial;
+				margin:0; padding:calc(12px + var(--safe-top)) 12px calc(12px + var(--safe-bottom)); font-family:'Inter',system-ui,Segoe UI,Roboto,Arial;
 				background: radial-gradient(800px 400px at 10% 10%, rgba(120,160,255,0.12), transparent),
 						linear-gradient(180deg,var(--bg1),var(--bg2));
 				color:var(--text); -webkit-font-smoothing:antialiased;
+			}
+
+			/* Improve touch behavior and hide tap highlight on iOS */
+			button, .btn, .add-btn, .primary, .ghost { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+
+			@media (max-width:420px){
+				body{ padding: calc(8px + var(--safe-top)) 10px calc(10px + var(--safe-bottom)); }
+				.modal{ width:96%; }
+				.day{ min-height:64px }
+				.btn{ padding:12px 14px; border-radius:12px }
+				.add-btn{ padding:12px }
 			}
 			.app{
 				max-width:920px; margin:0 auto; display:grid; grid-template-columns: 1fr 360px; grid-template-rows: auto 1fr; gap:14px; align-items:stretch; min-height:520px;
