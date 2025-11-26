@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Workout Calendar — Simple App</title>
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+		<style>
+			:root{
+				--bg1: #f6f9ff;
+				--bg2: #eef6ff;
+				--card: rgba(255,255,255,0.95);
+				--accent: linear-gradient(90deg,#7c3aed,#06b6d4);
+				--glass: rgba(11,37,64,0.06);
+				--muted: rgba(11,37,64,0.6);
+				--text: #0b2540;
+			}
+			*{box-sizing:border-box}
+			html,body{height:100%}
+			body{
+				margin:0; padding:28px; font-family:'Inter',system-ui,Segoe UI,Roboto,Arial;
+				background: radial-gradient(800px 400px at 10% 10%, rgba(120,160,255,0.12), transparent),
+						linear-gradient(180deg,var(--bg1),var(--bg2));
+				color:var(--text); -webkit-font-smoothing:antialiased;
+			}
+			.app{
+				max-width:920px; margin:0 auto; display:grid; grid-template-columns: 1fr 360px; grid-template-rows: auto 1fr; gap:14px; align-items:stretch; min-height:520px;
+			}
+			header{grid-column:1/-1; grid-row:1; display:flex; justify-content:space-between; align-items:center; margin-bottom:6px}
+			h1{font-weight:700; margin:0; font-size:20px; letter-spacing:-0.2px}
+			.sub{color:rgba(11,37,64,0.82); font-weight:600}
+
+			.calendar-card{
+				background: linear-gradient(180deg, #ffffff, #fbfdff);
+				border-radius:16px; padding:18px; box-shadow: 0 6px 22px rgba(11,37,64,0.06); border:1px solid rgba(11,37,64,0.06);
+				grid-row:2; height:100%; overflow:auto;
+			}
+			.cal-header{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px}
+			.month-nav{display:flex; gap:8px; align-items:center}
+			.btn{background:transparent; border:none; color:var(--text); padding:8px 12px; border-radius:10px; cursor:pointer}
+			.btn:active{transform:translateY(1px)}
+			.month-title{font-weight:700; font-size:18px}
+			.calendar{display:grid; grid-template-columns:repeat(7,1fr); gap:6px}
+			.dow{color:var(--muted); font-size:12px; text-align:center}
+			.day{
+				min-height:72px; background:linear-gradient(180deg, #fff, #fbfdff);
+				border-radius:10px; padding:8px; position:relative; cursor:pointer; overflow:hidden; transition:transform .12s ease, box-shadow .12s ease;
+				border:1px solid rgba(11,37,64,0.04)
+			}
+			.day:hover{transform:translateY(-6px); box-shadow: 0 10px 20px rgba(11,37,64,0.06)}
+			.day .num{position:absolute; top:6px; left:6px; font-weight:600; color:var(--text); font-size:13px}
+			.day .dots{position:absolute; bottom:8px; left:8px; right:8px; display:flex; gap:6px; flex-wrap:wrap}
+			.dot{width:8px; height:8px; border-radius:50%}
+			.day.other{opacity:0.45}
+			.sidebar{
+				background:linear-gradient(180deg, #ffffff, #fbfdff); border-radius:16px; padding:12px; overflow:auto; border:1px solid rgba(11,37,64,0.06);
+				grid-row:2; height:100%; display:flex; flex-direction:column;
+			}
+			.today-badge{background:linear-gradient(90deg,#06b6d4,#7c3aed); padding:6px 10px; border-radius:999px; font-weight:700}
+			#progressChart{width:100%; height:160px; border-radius:10px; background:linear-gradient(180deg,#fbfdff,#f6f9ff); display:block}
+			.add-btn{background:transparent; color:var(--text); border:1px dashed rgba(11,37,64,0.06); padding:10px; border-radius:12px; width:100%; margin-top:12px; cursor:pointer}
+			.entries{margin-top:12px; flex:1; overflow:auto}
+			.entry{background:#f8fbff; padding:10px; border-radius:10px; margin-bottom:8px; display:flex; gap:10px; align-items:flex-start}
+			.entry .bar{width:8px; height:48px; border-radius:8px}
+			.entry h4{margin:0; font-size:14px}
+			.entry small{color:var(--muted)}
+			.muted{color:var(--muted); font-size:13px}
+
+			/* modal */
+			.modal-backdrop{position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(11,37,64,0.06); z-index:80}
+			.modal{width:520px; background:linear-gradient(180deg,#ffffff,#fbfdff); border-radius:14px; padding:18px; border:1px solid rgba(11,37,64,0.06)}
+			.field{display:flex; flex-direction:column; gap:6px; margin-bottom:10px}
+			input,select,textarea{background:#fff; border:1px solid rgba(11,37,64,0.06); padding:10px; border-radius:10px; color:var(--text)}
+			textarea{min-height:80px; resize:vertical}
+			.actions{display:flex; gap:8px; justify-content:flex-end; margin-top:8px}
+			.ghost{background:transparent; border:1px solid rgba(255,255,255,0.04); padding:8px 12px; border-radius:10px; color:var(--muted); cursor:pointer}
+			.primary{background:var(--accent); border:none; padding:8px 12px; border-radius:10px; color:white; cursor:pointer}
+
+			@media (max-width:980px){
+				.app{grid-template-columns:1fr;}
+				.sidebar{height:auto}
+				.modal{width:92%}
+			}
+
+			/* print: show only the calendar card for printing */
+			@media print{
+				body *{visibility:hidden}
+				.calendar-card, .calendar-card *{visibility:visible}
+				.calendar-card{position:absolute; left:0; top:0; width:100%; box-shadow:none; border:none}
+			}
+		</style>
+	</head>
+	<body>
+		<div class="app">
+			<header>
+				<div>
+					<h1>Workout Calendar</h1>
+					<div class="sub">Track workouts quickly — click a day to add details</div>
+				</div>
+				<div style="text-align:right">
+					<div class="muted">Local data saved to your browser</div>
+				</div>
+			</header>
+
+			<main class="calendar-card">
+				<div class="cal-header">
+					<div class="month-nav">
+						<button class="btn" id="prevBtn">◀</button>
+						<div class="month-title" id="monthTitle">Month</div>
+						<button class="btn" id="nextBtn">▶</button>
+					</div>
+					<div style="display:flex; gap:10px; align-items:center">
+						<div class="muted">View</div>
+						<select id="viewSelect" class="btn" style="padding:6px 8px; border-radius:8px; background:transparent;">
+							<option value="month">Month</option>
+							<option value="week">Week</option>
+						</select>
+						<button class="btn" id="todayBtn">Today</button>
+						<button class="btn" id="printWeekBtn" style="display:none;">Print Week</button>
+					</div>
+				</div>
+
+				<div class="calendar" id="calendar">
+					<!-- days of week -->
+				</div>
+			</main>
+
+			<aside class="sidebar">
+				<div style="display:flex; justify-content:space-between; align-items:center">
+					<div>
+						<div class="muted">Selected</div>
+						<div style="font-weight:700; margin-top:6px" id="selectedDate">--</div>
+					</div>
+					<div>
+						<div class="today-badge" id="todayBadge">Today</div>
+						<canvas id="progressChart" aria-label="Workout minutes over time" role="img"></canvas>
+					</div>
+				</div>
+
+				<button id="addEntryBtn" class="add-btn">+ Add Workout</button>
+
+				<div class="entries" id="entriesList">
+					<div class="muted">No workouts selected.</div>
+				</div>
+			</aside>
+
+		</div>
+
+		<!-- Modal template -->
+		<template id="modalTpl">
+			<div class="modal-backdrop" id="modalRoot">
+				<div class="modal" role="dialog" aria-modal="true">
+					<h3 id="modalTitle">Add Workout</h3>
+					<div class="field">
+						<label class="muted">Date</label>
+						<input id="workoutDate" type="date" />
+					</div>
+					<div class="field">
+						<label class="muted">Type</label>
+						<select id="workoutType">
+							<option>Run</option>
+							<option>Bike</option>
+							<option>Swim</option>
+							<option>Strength</option>
+							<option>Yoga</option>
+							<option>Other</option>
+						</select>
+					</div>
+					<div class="field">
+						<label class="muted">Duration (minutes)</label>
+						<input id="workoutDuration" type="number" min="1" />
+					</div>
+					<div class="field">
+						<label class="muted">Intensity</label>
+						<select id="workoutIntensity">
+							<option>Low</option>
+							<option>Moderate</option>
+							<option>High</option>
+						</select>
+					</div>
+					<div class="field">
+						<label class="muted">Notes</label>
+						<textarea id="workoutNotes" placeholder="Optional notes..."></textarea>
+					</div>
+					<div class="field">
+						<label class="muted">Color</label>
+						<input id="workoutColor" type="color" value="#7c3aed" />
+					</div>
+					<div class="actions">
+						<button class="ghost" id="cancelModal">Cancel</button>
+						<button class="primary" id="saveModal">Save</button>
+					</div>
+				</div>
+			</div>
+		</template>
+
+		<script>
+			// Data key
+			const STORAGE_KEY = 'workouts_v1'
+
+			// State
+			let state = {
+				viewYear: new Date().getFullYear(),
+				viewMonth: new Date().getMonth(),
+				selectedDate: new Date().toISOString().slice(0,10),
+				viewMode: 'month', // 'month' or 'week'
+				workouts: JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+			}
+
+			const monthTitle = document.getElementById('monthTitle')
+			const calendarEl = document.getElementById('calendar')
+			const selectedDateEl = document.getElementById('selectedDate')
+			const entriesList = document.getElementById('entriesList')
+			const todayBadge = document.getElementById('todayBadge')
+
+			const prevBtn = document.getElementById('prevBtn')
+			const nextBtn = document.getElementById('nextBtn')
+			const todayBtn = document.getElementById('todayBtn')
+			const addEntryBtn = document.getElementById('addEntryBtn')
+			const viewSelect = document.getElementById('viewSelect')
+			const printWeekBtn = document.getElementById('printWeekBtn')
+			const progressCanvas = document.getElementById('progressChart')
+			const progressCtx = progressCanvas && progressCanvas.getContext ? progressCanvas.getContext('2d') : null
+
+			prevBtn.addEventListener('click', ()=>{ if(state.viewMode==='month') changeMonth(-1); else changeWeek(-1) })
+			nextBtn.addEventListener('click', ()=>{ if(state.viewMode==='month') changeMonth(1); else changeWeek(1) })
+			todayBtn.addEventListener('click', ()=>{ goToToday() })
+			addEntryBtn.addEventListener('click', ()=>{ openModalFor(state.selectedDate) })
+			viewSelect.addEventListener('change', (e)=>{ state.viewMode = e.target.value; printWeekBtn.style.display = state.viewMode==='week' ? 'inline-block' : 'none'; renderCalendar() })
+			printWeekBtn.addEventListener('click', ()=>{ window.print() })
+
+			function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state.workouts)) }
+
+			function changeMonth(delta){
+				state.viewMonth += delta
+				while(state.viewMonth < 0){ state.viewMonth += 12; state.viewYear -= 1 }
+				while(state.viewMonth > 11){ state.viewMonth -= 12; state.viewYear += 1 }
+				renderCalendar()
+			}
+
+			function changeWeek(delta){
+				const cur = new Date(state.selectedDate)
+				cur.setDate(cur.getDate() + delta * 7)
+				state.selectedDate = cur.toISOString().slice(0,10)
+				state.viewYear = cur.getFullYear(); state.viewMonth = cur.getMonth()
+				renderCalendar()
+			}
+
+			function goToToday(){ const d=new Date(); state.viewYear=d.getFullYear(); state.viewMonth=d.getMonth(); state.selectedDate=d.toISOString().slice(0,10); renderCalendar(); }
+
+			function renderCalendar(){
+				if(state.viewMode === 'month') renderMonth()
+				else renderWeek()
+			}
+
+			function renderMonth(){
+				calendarEl.innerHTML = ''
+				const dowNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+				for(let d of dowNames){
+					const el = document.createElement('div'); el.className='dow'; el.textContent=d; calendarEl.appendChild(el)
+				}
+
+				const first = new Date(state.viewYear, state.viewMonth, 1)
+				const last = new Date(state.viewYear, state.viewMonth+1, 0)
+				const startDay = first.getDay()
+				const total = last.getDate()
+
+				monthTitle.textContent = first.toLocaleString(undefined, { month:'long', year:'numeric' })
+
+				// previous month tail
+				const prevLast = new Date(state.viewYear, state.viewMonth, 0).getDate()
+				for(let i=0;i<startDay;i++){
+					const num = prevLast - startDay + 1 + i
+					appendDay(num, true)
+				}
+
+				for(let d=1; d<=total; d++) appendDay(d, false)
+
+				// fill remaining to end of week
+				const cellsSoFar = startDay + total
+				const remaining = (7 - (cellsSoFar % 7)) % 7
+				for(let i=1;i<=remaining;i++) appendDay(i, true)
+
+				updateSidebar()
+			}
+
+			function renderWeek(){
+				calendarEl.innerHTML = ''
+				const start = getStartOfWeek(new Date(state.selectedDate))
+				const days = []
+				for(let i=0;i<7;i++){ const d = new Date(start); d.setDate(start.getDate()+i); days.push(d) }
+
+				monthTitle.textContent = `Week of ${days[0].toLocaleDateString(undefined,{month:'short',day:'numeric'})}`
+
+				// build simple 7-column layout (reuse .calendar grid)
+				for(let d of days){
+					const col = document.createElement('div'); col.className='day'
+					const num = document.createElement('div'); num.className='num'; num.textContent = d.toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'})
+					col.appendChild(num)
+					const key = d.toISOString().slice(0,10)
+					const entries = state.workouts[key] || []
+					const list = document.createElement('div'); list.style.marginTop='36px'
+					entries.forEach(e=>{
+						const it = document.createElement('div'); it.style.padding='8px'; it.style.marginBottom='8px'; it.style.borderRadius='8px'; it.style.background='#fff'; it.style.boxShadow='0 2px 6px rgba(11,37,64,0.04)'
+						it.innerHTML = `<strong>${e.type}</strong> • ${e.duration} min<br><small style="color:var(--muted)">${e.intensity} ${e.notes? '• '+e.notes : ''}</small>`
+						list.appendChild(it)
+					})
+					col.appendChild(list)
+					col.addEventListener('click', ()=>{ state.selectedDate = key; updateSidebar() })
+					calendarEl.appendChild(col)
+				}
+
+				updateSidebar()
+			}
+
+			function appendDay(dayNum, otherMonth){
+				const cell = document.createElement('div'); cell.className='day' + (otherMonth? ' other':'')
+				const num = document.createElement('div'); num.className='num'; num.textContent = dayNum
+				cell.appendChild(num)
+
+				let dObj
+				if(otherMonth){
+					const isPrev = dayNum > 15
+					dObj = new Date(state.viewYear, state.viewMonth + (isPrev? -1: 1), dayNum)
+				} else {
+					dObj = new Date(state.viewYear, state.viewMonth, dayNum)
+				}
+				const key = dObj.toISOString().slice(0,10)
+
+				const dots = document.createElement('div'); dots.className='dots'
+				const entries = state.workouts[key] || []
+				entries.slice(0,4).forEach(e=>{ const dot=document.createElement('div'); dot.className='dot'; dot.style.background = e.color || '#7c3aed'; dots.appendChild(dot) })
+				if(entries.length>4){ const more=document.createElement('div'); more.className='muted'; more.style.fontSize='11px'; more.textContent=`+${entries.length-4}`; dots.appendChild(more) }
+
+				cell.appendChild(dots)
+				cell.addEventListener('click', ()=>{
+					state.selectedDate = key
+					if(otherMonth){ state.viewYear = dObj.getFullYear(); state.viewMonth = dObj.getMonth(); }
+					renderCalendar();
+				})
+
+				const todayKey = new Date().toISOString().slice(0,10)
+				if(key === todayKey){
+					const ring = document.createElement('div'); ring.style.position='absolute'; ring.style.right='8px'; ring.style.top='8px'; ring.style.width='8px'; ring.style.height='8px'; ring.style.borderRadius='50%'; ring.style.background='linear-gradient(90deg,#06b6d4,#7c3aed)'; cell.appendChild(ring)
+				}
+
+				calendarEl.appendChild(cell)
+			}
+
+			function updateSidebar(){
+				selectedDateEl.textContent = state.selectedDate
+				todayBadge.textContent = new Date().toLocaleDateString()
+				renderEntriesFor(state.selectedDate)
+				drawProgressChart()
+			}
+
+			function getDailyTotals(days=7, endDateStr=null){
+				// always default to trailing `days` ending today (user requested trailing 7 days)
+				const end = endDateStr ? new Date(endDateStr) : new Date()
+				end.setHours(0,0,0,0)
+				const res = []
+				for(let i=days-1;i>=0;i--){
+					const d = new Date(end); d.setDate(end.getDate()-i)
+					const key = d.toISOString().slice(0,10)
+					const entries = state.workouts[key] || []
+					const total = entries.reduce((s,e)=>s + (parseInt(e.duration)||0), 0)
+					res.push({ date:key, label: d.toLocaleDateString(undefined,{weekday:'short'}), minutes: total })
+				}
+				return res
+			}
+
+			function drawProgressChart(){
+				if(!progressCtx) return
+				// trailing 7 days ending today
+				const data = getDailyTotals(7)
+				const dpr = window.devicePixelRatio || 1
+				const w = progressCanvas.clientWidth
+				const h = progressCanvas.clientHeight
+				progressCanvas.width = Math.floor(w * dpr)
+				progressCanvas.height = Math.floor(h * dpr)
+				progressCtx.clearRect(0,0,progressCanvas.width, progressCanvas.height)
+
+				const margin = {left:36, right:8, top:12, bottom:30}
+				const cw = progressCanvas.width, ch = progressCanvas.height
+				const plotW = (cw/dpr) - (margin.left+margin.right)
+				const plotH = (ch/dpr) - (margin.top+margin.bottom)
+
+				const maxVal = Math.max(10, ...data.map(d=>d.minutes))
+
+				progressCtx.save()
+				progressCtx.scale(dpr,dpr)
+				// draw horizontal grid + Y labels
+				progressCtx.fillStyle = '#0b2540'
+				progressCtx.font = '11px Inter, system-ui'
+				progressCtx.textAlign = 'right'
+				const ticks = 4
+				for(let i=0;i<=ticks;i++){
+					const t = i / ticks
+					const y = margin.top + plotH * (1 - t)
+					const val = Math.round(maxVal * t)
+					progressCtx.fillStyle = '#0b2540'
+					progressCtx.fillText(val.toString(), margin.left-8, y+4)
+					progressCtx.strokeStyle = 'rgba(11,37,64,0.06)'
+					progressCtx.beginPath(); progressCtx.moveTo(margin.left, y); progressCtx.lineTo(margin.left + plotW, y); progressCtx.stroke()
+				}
+
+				// plot line
+				const step = plotW / (data.length - 1 || 1)
+				progressCtx.beginPath()
+				for(let i=0;i<data.length;i++){
+					const x = margin.left + i * step
+					const y = margin.top + plotH * (1 - (data[i].minutes / maxVal))
+					if(i===0) progressCtx.moveTo(x,y); else progressCtx.lineTo(x,y)
+				}
+				progressCtx.strokeStyle = '#7c3aed'
+				progressCtx.lineWidth = 2
+				progressCtx.stroke()
+
+				// draw points
+				for(let i=0;i<data.length;i++){
+					const x = margin.left + i * step
+					const y = margin.top + plotH * (1 - (data[i].minutes / maxVal))
+					progressCtx.fillStyle = '#fff'
+					progressCtx.beginPath(); progressCtx.arc(x, y, 3.5, 0, Math.PI*2); progressCtx.fill()
+					progressCtx.strokeStyle = '#7c3aed'; progressCtx.lineWidth = 2; progressCtx.stroke()
+				}
+
+				// draw x labels (weekday short)
+				progressCtx.fillStyle = '#0b2540'
+				progressCtx.textAlign = 'center'
+				progressCtx.font = '11px Inter, system-ui'
+				for(let i=0;i<data.length;i++){
+					const x = margin.left + i * step
+					const lbl = data[i].label
+					progressCtx.fillText(lbl, x, margin.top + plotH + 18)
+				}
+
+				progressCtx.restore()
+			}
+
+			window.addEventListener('resize', ()=>{ drawProgressChart() })
+
+			function renderEntriesFor(dateKey){
+				const entries = state.workouts[dateKey] || []
+				entriesList.innerHTML = ''
+				if(entries.length===0){ entriesList.innerHTML = '<div class="muted">No workouts for this day.</div>'; return }
+				entries.forEach(entry=>{
+					const node = document.createElement('div'); node.className='entry'
+					const bar = document.createElement('div'); bar.className='bar'; bar.style.background = entry.color || '#7c3aed'
+					const info = document.createElement('div'); info.style.flex='1'
+					const h = document.createElement('h4'); h.textContent = `${entry.type} • ${entry.duration} min`
+					const meta = document.createElement('div'); meta.className='muted'; meta.textContent = `${entry.intensity} • ${entry.notes || ''}`
+					info.appendChild(h); info.appendChild(meta)
+					const actions = document.createElement('div')
+					const edit = document.createElement('button'); edit.className='ghost'; edit.textContent='Edit'; edit.addEventListener('click', ()=> openModalFor(dateKey, entry.id))
+					const del = document.createElement('button'); del.className='ghost'; del.textContent='Delete'; del.addEventListener('click', ()=> { if(confirm('Delete this workout?')) { deleteEntry(dateKey, entry.id) } })
+					actions.appendChild(edit); actions.appendChild(del)
+					node.appendChild(bar); node.appendChild(info); node.appendChild(actions)
+					entriesList.appendChild(node)
+				})
+			}
+
+			function openModalFor(dateKey, entryId){
+				const tpl = document.getElementById('modalTpl')
+				const clone = tpl.content.cloneNode(true)
+				document.body.appendChild(clone)
+				const root = document.getElementById('modalRoot')
+				const modalTitle = document.getElementById('modalTitle')
+				const dateInput = document.getElementById('workoutDate')
+				const typeInput = document.getElementById('workoutType')
+				const durInput = document.getElementById('workoutDuration')
+				const intensityInput = document.getElementById('workoutIntensity')
+				const notesInput = document.getElementById('workoutNotes')
+				const colorInput = document.getElementById('workoutColor')
+				const cancelBtn = document.getElementById('cancelModal')
+				const saveBtn = document.getElementById('saveModal')
+
+				let editing = null
+				if(entryId){
+					const entries = state.workouts[dateKey] || []
+					editing = entries.find(e=>e.id===entryId)
+				}
+
+				modalTitle.textContent = editing? 'Edit Workout' : 'Add Workout'
+				dateInput.value = dateKey
+				if(editing){ typeInput.value = editing.type; durInput.value = editing.duration; intensityInput.value=editing.intensity; notesInput.value=editing.notes||''; colorInput.value=editing.color||'#7c3aed' }
+
+				cancelBtn.addEventListener('click', ()=>{ root.remove(); })
+				root.addEventListener('click', (ev)=>{ if(ev.target===root) root.remove() })
+
+				saveBtn.addEventListener('click', ()=>{
+					const d = dateInput.value
+					if(!d){ alert('Please choose a date'); return }
+					const obj = {
+						id: editing? editing.id : 'id-'+Date.now(),
+						type: typeInput.value,
+						duration: parseInt(durInput.value) || 0,
+						intensity: intensityInput.value,
+						notes: notesInput.value.trim(),
+						color: colorInput.value
+					}
+					if(!state.workouts[d]) state.workouts[d] = []
+					if(editing){
+						const idx = state.workouts[d].findIndex(e=>e.id===editing.id)
+						if(idx>-1) state.workouts[d][idx] = obj
+					} else {
+						state.workouts[d].unshift(obj)
+					}
+					saveState()
+					root.remove()
+					// if date changed or we added to different day
+					state.selectedDate = d
+					renderCalendar()
+				})
+			}
+
+			function deleteEntry(dateKey, id){
+				if(!state.workouts[dateKey]) return
+				state.workouts[dateKey] = state.workouts[dateKey].filter(e=>e.id!==id)
+				if(state.workouts[dateKey].length===0) delete state.workouts[dateKey]
+				saveState(); renderCalendar();
+			}
+
+			function getStartOfWeek(d){ const copy = new Date(d); const day = copy.getDay(); copy.setDate(copy.getDate() - day); copy.setHours(0,0,0,0); return copy }
+
+			// initial
+			renderCalendar()
+
+			// expose a tiny export/import feature via console for now
+			window.workoutExport = ()=> JSON.stringify(state.workouts, null, 2)
+			window.workoutImport = (json)=>{ try{ state.workouts = JSON.parse(json); saveState(); renderCalendar(); alert('Imported OK') }catch(e){ alert('Invalid JSON') } }
+		</script>
+	</body>
+</html>
