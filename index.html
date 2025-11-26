@@ -96,12 +96,12 @@
 				.app{grid-template-columns:1fr;}
 				.sidebar{height:auto}
 				.modal{width:92%}
-				/* Stack calendar above the sidebar on narrower screens */
-				.app{ grid-template-rows: auto 1fr auto; }
-				.calendar-card{ grid-row:2 }
-				.sidebar{ grid-row:3 }
+				/* Place sidebar (chart + add) above the calendar on narrower screens */
+				.app{ grid-template-rows: auto auto 1fr; }
 				header{ padding-bottom:8px }
 				.header-right{ display:none }
+				.sidebar{ grid-row:2 }
+				.calendar-card{ grid-row:3 }
 				.cal-header{ flex-wrap:wrap; gap:10px }
 				.month-title{ width:100%; text-align:center }
 				.month-nav{ order:1 }
@@ -121,7 +121,7 @@
 				/* make the chart and sidebar breathe */
 				.sidebar{ padding:14px }
 				#progressChart{ height:180px }
-				.add-btn{ padding:14px }
+				.add-btn{ padding:14px; font-weight:700; font-size:16px; color:#fff; background:linear-gradient(90deg,#06b6d4,#7c3aed); border:none; box-shadow:0 6px 18px rgba(124,58,237,0.12); border-radius:14px }
 				/* reduce extra header noise */
 				head > div:last-child{ display:none }
 			}
